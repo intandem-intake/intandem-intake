@@ -610,9 +610,11 @@
       const res = await fetch(`${DEAL_LOOKUP_URL}?companyId=${companyId}&_t=${Date.now()}`, { cache: 'no-store' });
       const raw = await res.json();
       const data = Array.isArray(raw) ? raw[0] : raw;
-      const deals = (data && data.deals) || [];
+      const allDeals = (data && data.deals) || [];
+      const wonStages = ['closedwon', '53939232', '1276565565', '53927696', '141432952', '1276813947', 'deal_registration_closed_won'];
+      const deals = allDeals.filter(d => !wonStages.includes((d.dealstage || '').toLowerCase()));
       if (deals.length === 0) {
-        dealList.innerHTML = '<div class="deal-loading" style="color:var(--muted)">No existing deals found.</div>';
+        dealList.innerHTML = '<div class="deal-loading" style="color:var(--muted)">No open deals found.</div>';
         return;
       }
       dealList.innerHTML = deals.map(d => `
