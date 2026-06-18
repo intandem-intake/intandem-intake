@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InTandem — Matching Request</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: #e2e0d9;
+    --border-focus: #2563eb;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --error: #dc2626;
+    --error-light: #fef2f2;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .page { max-width: 720px; margin: 0 auto; }
+
+  .header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .header p {
+    color: var(--muted);
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .logo-mark {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .grid { display: grid; gap: 12px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  label .req { color: var(--error); margin-left: 2px; }
+  label .opt { color: var(--muted); font-weight: 400; font-size: 11px; margin-left: 4px; }
+
+  input[type=text], input[type=date], input[type=url], select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  select {
+    padding-right: 28px;
+    cursor: pointer;
+  }
+
+  .search-wrap { position: relative; }
+
+  .search-wrap input { padding-right: 36px; }
+
+  .search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .dropdown.open { display: block; }
+
+  .dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: var(--accent-light); }
+
+  .dropdown-item .item-name { font-weight: 500; color: var(--text); }
+  .dropdown-item .item-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .dropdown-loading, .dropdown-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .selected-company {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--accent-light);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+
+  .selected-company .name { font-weight: 500; color: var(--accent); }
+  .selected-company .clear {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .deal-option {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.1s;
+    margin-bottom: 6px;
+  }
+
+  .deal-option:last-child { margin-bottom: 0; }
+
+  .deal-option:hover { border-color: var(--accent); background: var(--accent-light); }
+
+  .deal-option.selected { border-color: var(--accent); background: var(--accent-light); }
+
+  .deal-option input[type=radio] { display: none; }
+
+  .deal-name { font-weight: 500; font-size: 13px; color: var(--text); }
+  .deal-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .deal-loading { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+  .new-deal-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1rem 0;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    font-family: inherit;
+    margin-top: 1rem;
+  }
+
+  .submit-btn:hover { background: #1d4ed8; }
+  .submit-btn:active { transform: scale(0.99); }
+  .submit-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+  .status-bar {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .status-bar.success { background: var(--success-light); color: var(--success); border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 8px; }
+  .status-bar.error { background: var(--error-light); color: var(--error); border: 1px solid #fecaca; display: flex; align-items: center; gap: 8px; }
+  .status-bar.loading { background: var(--accent-light); color: var(--accent); border: 1px solid #bfdbfe; display: flex; align-items: center; gap: 8px; }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">IT</div>
+      <span class="logo-text">InTandem</span>
+    </div>
+    <h1>Matching request</h1>
+    <p>Submit a new project for automated asset creation — form, email draft, and contact list.</p>
+  </div>
+
+  <form id="intakeForm" autocomplete="off">
+
+    <div class="section">
+      <div class="section-title">Client & deal</div>
+
+      <div class="grid">
+        <div class="field">
+          <label>Search client company <span class="req">*</span></label>
+          <div class="search-wrap" id="companySearchWrap">
+            <input type="text" id="companySearch" placeholder="Type company name..." autocomplete="off" />
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div class="dropdown" id="companyDropdown"></div>
+          </div>
+          <div id="selectedCompany" style="display:none"></div>
+          <input type="hidden" id="companyId" name="companyId" />
+          <input type="hidden" id="companyName" name="companyName" />
+        </div>
+
+        <div class="field" id="dealField" style="display:none">
+          <label>Select associated deal <span class="req">*</span></label>
+          <div id="dealList"></div>
+          <button type="button" class="new-deal-toggle" id="newDealBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create new deal instead
+          </button>
+          <input type="hidden" id="dealId" name="dealId" />
+          <input type="hidden" id="dealName" name="dealName" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Project details</div>
+      <div class="grid grid-2" style="margin-bottom:12px">
+        <div class="field">
+          <label>Role title <span class="req">*</span></label>
+          <input type="text" name="roleTitle" placeholder="e.g. RevOps Manager" required />
+        </div>
+        <div class="field">
+          <label>Role type <span class="req">*</span></label>
+          <select name="roleType" required>
+            <option value="">Select...</option>
+            <option>RevOps</option>
+            <option>Marketing Ops</option>
+            <option>Sales Ops</option>
+            <option>CS Ops</option>
+            <option>GTM / Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>Project summary <span class="req">*</span></label>
+          <textarea name="projectSummary" placeholder="Brief description of the client, their challenge, and what this engagement will achieve..." required></textarea>
+        </div>
+        <div class="field">
+          <label>Reason for need <span class="req">*</span></label>
+          <textarea name="reasonForNeed" placeholder="Why does the client need this role? What problem are they solving?" required></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Engagement details</div>
+      <div class="grid grid-3" style="margin-bottom:12px">
+        <div class="field">
+          <label>Duration <span class="req">*</span></label>
+          <select name="duration" required>
+            <option value="">Select...</option>
+            <option>1 month</option>
+            <option>2 months</option>
+            <option>3 months</option>
+            <option>6 months</option>
+            <option>Month-to-month</option>
+            <option>12 months</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Hours / month <span class="req">*</span></label>
+          <select name="hoursPerMonth" required>
+            <option value="">Select...</option>
+            <option>20 hrs (5/wk)</option>
+            <option>40 hrs (10/wk)</option>
+            <option>80 hrs (20/wk)</option>
+            <option>120 hrs (30/wk)</option>
+            <option>160 hrs (40/wk)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Consultant rate <span class="req">*</span></label>
+          <input type="text" name="consultantRate" placeholder="e.g. $90/hour" required />
+        </div>
+      </div>
+      <div class="grid grid-3" style="margin-bottom:12px">
+        <div class="field">
+          <label>Start date <span class="req">*</span></label>
+          <select name="startDate" required>
+            <option value="">Select...</option>
+            <option>ASAP</option>
+            <option>Within 2 weeks</option>
+            <option>Specific date</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Application deadline <span class="req">*</span></label>
+          <input type="date" name="applicationDeadline" required />
+        </div>
+        <div class="field">
+          <label>Intro deadline <span class="req">*</span></label>
+          <input type="date" name="introDeadline" required />
+        </div>
+      </div>
+      <div class="grid grid-3">
+        <div class="field">
+          <label>Resource level <span class="req">*</span></label>
+          <select name="resourceLevel" required>
+            <option value="">Select...</option>
+            <option>Analyst</option>
+            <option>Senior Analyst</option>
+            <option>Manager</option>
+            <option>Senior Manager</option>
+            <option>Director</option>
+            <option>VP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temp to perm? <span class="req">*</span></label>
+          <select name="tempToPerm" required>
+            <option value="">Select...</option>
+            <option>No</option>
+            <option>Possible</option>
+            <option>Yes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>In-office? <span class="req">*</span></label>
+          <select name="inOffice" required>
+            <option value="">Select...</option>
+            <option>Fully remote</option>
+            <option>Hybrid</option>
+            <option>On-site</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Candidate requirements</div>
+      <div class="grid grid-2" style="margin-bottom:12px">
+        <div class="field">
+          <label>Primary tools required <span class="req">*</span></label>
+          <input type="text" name="primaryTools" placeholder="e.g. Salesforce, DealHub, Claude" required />
+        </div>
+        <div class="field">
+          <label>Current client tech stack <span class="req">*</span></label>
+          <input type="text" name="techStack" placeholder="e.g. Salesforce, DealHub, Claude, Gong" required />
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Time zone requirement <span class="req">*</span></label>
+          <input type="text" name="timezone" placeholder="e.g. Eastern or Central US, Western Europe" required />
+        </div>
+        <div class="field">
+          <label>Industry experience <span class="req">*</span></label>
+          <input type="text" name="industryExperience" placeholder="e.g. SaaS and/or fintech required" required />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Supporting documents</div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Proposal document URL <span class="opt">optional</span></label>
+          <input type="url" name="proposalUrl" placeholder="Google Drive or Notion link" />
+        </div>
+        <div class="field">
+          <label>Contract status <span class="req">*</span></label>
+          <select name="contractStatus" required>
+            <option value="">Select...</option>
+            <option>Proposal shared with client</option>
+            <option>Pricing confirmed</option>
+            <option>Contract signed</option>
+            <option>Verbal agreement</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="field">
+          <label>Additional context <span class="opt">optional</span></label>
+          <textarea name="additionalContext" placeholder="Any extra context, client nuances, or notes from discovery..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">Submit matching request</button>
+    <div class="status-bar" id="statusBar"></div>
+
+  </form>
+</div>
+
+<script>
+  const COMPANY_SEARCH_URL = 'https://angelpalaganas04.app.n8n.cloud/webhook/hubspot-company-search';
+  const DEAL_LOOKUP_URL = 'https://angelpalaganas04.app.n8n.cloud/webhook/hubspot-deal-lookup';
+  const INTAKE_WEBHOOK_URL = 'https://angelpalaganas04.app.n8n.cloud/webhook/hubspot-intake';
+
+  let searchTimeout = null;
+  let selectedDealId = null;
+  let selectedDealName = null;
+
+  const companySearch = document.getElementById('companySearch');
+  const companyDropdown = document.getElementById('companyDropdown');
+  const selectedCompanyDiv = document.getElementById('selectedCompany');
+  const companyIdInput = document.getElementById('companyId');
+  const companyNameInput = document.getElementById('companyName');
+  const dealField = document.getElementById('dealField');
+  const dealList = document.getElementById('dealList');
+  const dealIdInput = document.getElementById('dealId');
+  const dealNameInput = document.getElementById('dealName');
+  const newDealBtn = document.getElementById('newDealBtn');
+  const statusBar = document.getElementById('statusBar');
+  const submitBtn = document.getElementById('submitBtn');
+
+  companySearch.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const q = companySearch.value.trim();
+    if (q.length < 2) { companyDropdown.classList.remove('open'); return; }
+    companyDropdown.innerHTML = '<div class="dropdown-loading">Searching...</div>';
+    companyDropdown.classList.add('open');
+    searchTimeout = setTimeout(() => searchCompanies(q), 350);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#companySearchWrap')) {
+      companyDropdown.classList.remove('open');
+    }
+  });
+
+  async function searchCompanies(q) {
+    try {
+      const res = await fetch(`${COMPANY_SEARCH_URL}?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const companies = Array.isArray(data) ? data : [];
+      if (companies.length === 0) {
+        companyDropdown.innerHTML = '<div class="dropdown-empty">No companies found</div>';
+        return;
+      }
+      companyDropdown.innerHTML = companies.map(c => `
+        <div class="dropdown-item" data-id="${c.id}" data-name="${c.name}">
+          <div class="item-name">${c.name}</div>
+          <div class="item-sub">${c.domain || ''}</div>
+        </div>
+      `).join('');
+      companyDropdown.querySelectorAll('.dropdown-item').forEach(el => {
+        el.addEventListener('click', () => selectCompany(el.dataset.id, el.dataset.name));
+      });
+    } catch (e) {
+      companyDropdown.innerHTML = '<div class="dropdown-empty">Error searching. Try again.</div>';
+    }
+  }
+
+  function selectCompany(id, name) {
+    companyIdInput.value = id;
+    companyNameInput.value = name;
+    companySearch.style.display = 'none';
+    companyDropdown.classList.remove('open');
+    selectedCompanyDiv.style.display = 'flex';
+    selectedCompanyDiv.innerHTML = `
+      <div class="selected-company">
+        <span class="name">${name}</span>
+        <button type="button" class="clear" onclick="clearCompany()">×</button>
+      </div>
+    `;
+    dealField.style.display = 'block';
+    loadDeals(id);
+  }
+
+  function clearCompany() {
+    companyIdInput.value = '';
+    companyNameInput.value = '';
+    companySearch.style.display = '';
+    companySearch.value = '';
+    selectedCompanyDiv.style.display = 'none';
+    dealField.style.display = 'none';
+    dealList.innerHTML = '';
+    dealIdInput.value = '';
+    dealNameInput.value = '';
+    selectedDealId = null;
+    selectedDealName = null;
+  }
+
+  async function loadDeals(companyId) {
+    dealList.innerHTML = '<div class="deal-loading">Loading deals...</div>';
+    dealIdInput.value = '';
+    dealNameInput.value = '';
+    selectedDealId = null;
+    try {
+      const res = await fetch(`${DEAL_LOOKUP_URL}?companyId=${companyId}`);
+      const data = await res.json();
+      const deals = data.deals || [];
+      if (deals.length === 0) {
+        dealList.innerHTML = '<div class="deal-loading" style="color:var(--muted)">No existing deals found.</div>';
+        return;
+      }
+      dealList.innerHTML = deals.map(d => `
+        <label class="deal-option" data-id="${d.id}" data-name="${d.dealname || 'Unnamed deal'}">
+          <input type="radio" name="dealSelect" value="${d.id}" />
+          <span class="deal-name">${d.dealname || 'Unnamed deal'}</span>
+          <span class="deal-meta">${d.dealstage || ''} ${d.closedate ? '· ' + d.closedate.split('T')[0] : ''}</span>
+        </label>
+      `).join('');
+      dealList.querySelectorAll('.deal-option').forEach(el => {
+        el.addEventListener('click', () => {
+          dealList.querySelectorAll('.deal-option').forEach(o => o.classList.remove('selected'));
+          el.classList.add('selected');
+          dealIdInput.value = el.dataset.id;
+          dealNameInput.value = el.dataset.name;
+          selectedDealId = el.dataset.id;
+          selectedDealName = el.dataset.name;
+        });
+      });
+    } catch (e) {
+      dealList.innerHTML = '<div class="deal-loading" style="color:var(--error)">Error loading deals.</div>';
+    }
+  }
+
+  newDealBtn.addEventListener('click', () => {
+    dealList.querySelectorAll('.deal-option').forEach(o => o.classList.remove('selected'));
+    dealIdInput.value = 'new';
+    dealNameInput.value = 'New deal';
+    selectedDealId = 'new';
+    newDealBtn.style.background = 'var(--accent-light)';
+    newDealBtn.style.padding = '8px 10px';
+    newDealBtn.style.borderRadius = 'var(--radius)';
+    newDealBtn.style.border = '1px solid #bfdbfe';
+  });
+
+  function showStatus(type, message) {
+    statusBar.className = `status-bar ${type}`;
+    statusBar.style.display = 'flex';
+    if (type === 'loading') {
+      statusBar.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+    } else {
+      const icon = type === 'success' ? '✓' : '✕';
+      statusBar.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    }
+  }
+
+  document.getElementById('intakeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!companyIdInput.value) { showStatus('error', 'Please select a client company.'); return; }
+    if (!dealIdInput.value) { showStatus('error', 'Please select or create a deal.'); return; }
+
+    submitBtn.disabled = true;
+    showStatus('loading', 'Submitting request and triggering asset creation...');
+
+    const form = e.target;
+    const data = {
+      companyId: companyIdInput.value,
+      companyName: companyNameInput.value,
+      dealId: dealIdInput.value,
+      dealName: dealNameInput.value,
+      roleTitle: form.roleTitle.value,
+      roleType: form.roleType.value,
+      projectSummary: form.projectSummary.value,
+      reasonForNeed: form.reasonForNeed.value,
+      duration: form.duration.value,
+      hoursPerMonth: form.hoursPerMonth.value,
+      consultantRate: form.consultantRate.value,
+      startDate: form.startDate.value,
+      applicationDeadline: form.applicationDeadline.value,
+      introDeadline: form.introDeadline.value,
+      resourceLevel: form.resourceLevel.value,
+      tempToPerm: form.tempToPerm.value,
+      inOffice: form.inOffice.value,
+      primaryTools: form.primaryTools.value,
+      techStack: form.techStack.value,
+      timezone: form.timezone.value,
+      industryExperience: form.industryExperience.value,
+      proposalUrl: form.proposalUrl.value,
+      contractStatus: form.contractStatus.value,
+      additionalContext: form.additionalContext.value,
+      submittedAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(INTAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        showStatus('success', 'Request submitted! Asset creation is now running in the background.');
+        form.reset();
+        clearCompany();
+      } else {
+        throw new Error('Server error');
+      }
+    } catch (err) {
+      showStatus('error', 'Submission failed. Please try again or contact your admin.');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
