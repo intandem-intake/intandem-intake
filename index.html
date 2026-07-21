@@ -805,6 +805,7 @@
 
   document.getElementById('intakeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const form = e.target;
     if (!companyIdInput.value) { showStatus('error', 'Please select a client company.'); return; }
     if (!dealIdInput.value) { showStatus('error', 'Please select or create a deal.'); return; }
 
@@ -817,7 +818,6 @@
     submitBtn.disabled = true;
     showStatus('loading', 'Submitting request and triggering asset creation...');
 
-    const form = e.target;
     const data = {
       companyId: companyIdInput.value,
       companyName: companyNameInput.value,
