@@ -247,6 +247,89 @@
     margin: 1rem 0;
   }
 
+  .mode-toggle-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .mode-toggle-text { flex: 1; }
+
+  .mode-toggle-text .mode-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .mode-toggle-text .mode-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .mode-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .mode-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .mode-switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 999px;
+    transition: background 0.15s;
+  }
+
+  .mode-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+  }
+
+  .mode-switch input:checked + .mode-switch-track {
+    background: var(--accent);
+  }
+
+  .mode-switch input:checked + .mode-switch-track .mode-switch-thumb {
+    transform: translateX(20px);
+  }
+
+  .freetext-section textarea {
+    min-height: 220px;
+    font-size: 13px;
+  }
+
+  .freetext-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .hidden-section { display: none !important; }
+
   .submit-btn {
     width: 100%;
     padding: 12px;
@@ -339,6 +422,18 @@
       </div>
     </div>
 
+    <div class="mode-toggle-section">
+      <div class="mode-toggle-text">
+        <div class="mode-title">Non-standard project?</div>
+        <div class="mode-sub">Skip the structured fields — paste client emails, notes, or a rough description instead.</div>
+      </div>
+      <label class="mode-switch">
+        <input type="checkbox" id="freeTextToggle" />
+        <span class="mode-switch-track"><span class="mode-switch-thumb"></span></span>
+      </label>
+    </div>
+
+    <div id="structuredFields">
     <div class="section">
       <div class="section-title">Project details</div>
       <div class="grid grid-2" style="margin-bottom:12px">
@@ -496,11 +591,16 @@
           </select>
         </div>
       </div>
-      <div class="grid" style="margin-top:12px">
-        <div class="field">
-          <label>Additional context <span class="opt">optional</span></label>
-          <textarea name="additionalContext" placeholder="Any extra context, client nuances, or notes from discovery..."></textarea>
-        </div>
+    </div>
+    </div><!-- /structuredFields -->
+
+    <div class="section freetext-section">
+      <div class="section-title" id="freetextLabel">Additional context <span class="opt">optional</span></div>
+      <div class="field">
+        <textarea name="additionalContext" id="additionalContext" placeholder="Any extra context, client nuances, or notes from discovery..."></textarea>
+      </div>
+      <div class="freetext-hint" id="freetextHint" style="display:none">
+        Paste client emails, discovery notes, scope docs, or just describe the project in your own words. Claude will extract the structured details automatically — you don't need to fill out the sections above.
       </div>
     </div>
 
@@ -531,6 +631,44 @@
   const newDealBtn = document.getElementById('newDealBtn');
   const statusBar = document.getElementById('statusBar');
   const submitBtn = document.getElementById('submitBtn');
+  const freeTextToggle = document.getElementById('freeTextToggle');
+  const structuredFields = document.getElementById('structuredFields');
+  const additionalContext = document.getElementById('additionalContext');
+  const freetextLabel = document.getElementById('freetextLabel');
+  const freetextHint = document.getElementById('freetextHint');
+
+  // Fields that stay required in structured mode and get relaxed in free-text mode.
+  // (Company/deal selection is handled separately and is always required.)
+  const structuredRequiredFields = Array.from(
+    structuredFields.querySelectorAll('[required]')
+  );
+
+  function setFreeTextMode(isFreeText) {
+    if (isFreeText) {
+      structuredFields.classList.add('hidden-section');
+      structuredRequiredFields.forEach(el => {
+        el.dataset.wasRequired = 'true';
+        el.removeAttribute('required');
+      });
+      additionalContext.setAttribute('required', 'required');
+      additionalContext.placeholder = 'Paste client emails, discovery notes, a scope doc, or just describe the project in your own words...';
+      freetextLabel.innerHTML = 'Project context / raw email thread <span class="req">*</span>';
+      freetextHint.style.display = 'block';
+    } else {
+      structuredFields.classList.remove('hidden-section');
+      structuredRequiredFields.forEach(el => {
+        if (el.dataset.wasRequired) el.setAttribute('required', 'required');
+      });
+      additionalContext.removeAttribute('required');
+      additionalContext.placeholder = 'Any extra context, client nuances, or notes from discovery...';
+      freetextLabel.innerHTML = 'Additional context <span class="opt">optional</span>';
+      freetextHint.style.display = 'none';
+    }
+  }
+
+  freeTextToggle.addEventListener('change', () => {
+    setFreeTextMode(freeTextToggle.checked);
+  });
 
   companySearch.addEventListener('input', function() {
     clearTimeout(searchTimeout);
@@ -666,6 +804,12 @@
     if (!companyIdInput.value) { showStatus('error', 'Please select a client company.'); return; }
     if (!dealIdInput.value) { showStatus('error', 'Please select or create a deal.'); return; }
 
+    const isFreeText = freeTextToggle.checked;
+    if (isFreeText && form.additionalContext.value.trim().length < 40) {
+      showStatus('error', 'Please paste more context — a couple sentences or an email is not enough for automatic extraction.');
+      return;
+    }
+
     submitBtn.disabled = true;
     showStatus('loading', 'Submitting request and triggering asset creation...');
 
@@ -675,6 +819,7 @@
       companyName: companyNameInput.value,
       dealId: dealIdInput.value,
       dealName: dealNameInput.value,
+      intakeMode: isFreeText ? 'freetext' : 'structured',
       roleTitle: form.roleTitle.value,
       roleType: form.roleType.value,
       projectSummary: form.projectSummary.value,
@@ -708,6 +853,7 @@
         showStatus('success', 'Request submitted! Asset creation is now running in the background.');
         form.reset();
         clearCompany();
+        setFreeTextMode(false);
       } else {
         throw new Error('Server error');
       }
